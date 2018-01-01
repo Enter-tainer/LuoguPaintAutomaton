@@ -1,7 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env py
 import time
 
 import requests
+
+from colorama import Fore, Back, Style, init
+
+init()
 
 col_dic = {
     (0, 0, 0): 0,
@@ -81,22 +85,47 @@ class user:
         self.last_time = last_time
 
 
-def dis(c1, c2):
-    return (c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2
+class task:
+    def __init__(self, x, y, col):
+        self.x = x
+        self.y = y
+        self.col = col
 
 
-def get_nearest(col):
-    mindis = dis(col, col_lst[0])
-    mincol = col_lst[0]
-    for i in col_lst:
-        if dis(i, col) < mindis:
-            mindis = dis(i, col)
-            mincol = i
-    return mincol
-
-
-data = {'x': 0, 'y': 0, 'color': 2}
+data = {'x': 0, 'y': 0, 'color': 0}
 user_lst = []
+task_que = []
+
+
+def print_line():
+    print(Fore.MAGENTA + "==============================================================================")
+
+
+times = 0
+mlst = []
+
+
+def check_task(point):
+    global times
+    global mlst
+    if times == 20:
+        times -= 20
+    if times == 0:
+        try:
+            q = requests.get("https://www.luogu.org/paintBoard/Board",
+                             cookies=user_lst[0].cookie_dict)
+        except:
+            time.sleep(0.01)
+            q = requests.get("https://www.luogu.org/paintBoard/Board",
+                             cookies=user_lst[0].cookie_dict)
+        mlst = q.text.split('\n')
+    times += 1
+    if mlst[point.x][point.y] == point.col:
+        return True
+    else:
+        return False
+
+
 with open("cookies.txt", "r") as cok:
     coks = cok.readlines()
     for i in coks:
@@ -105,81 +134,73 @@ with open("cookies.txt", "r") as cok:
         clid = clid.replace('\n', '')
         user_lst.append(
             user(dict(UM_distinctid=umid, __client_id=clid), time.time() - 29))
-    print("Users:")
+    print_line()
+    print(Fore.CYAN + "Users:")
     for i in user_lst:
-        print("cookies: {0}\n".format(i.cookie_dict))
+        print(Fore.YELLOW + "cookies: {0}".format(i.cookie_dict))
+    print_line()
+base_x = 624
+base_y = 186
+with open("base32.txt", "r") as pic:
+    s = pic.readline()
+    l = int(str(s).split(' ')[0])
+    h = int(str(s).split(' ')[1])
+    task_num = l * h
+    lst = pic.readlines()
+    for i in range(0, len(lst)):
+        lst[i] = lst[i].replace('\n', '')
+        for j in range(0, len(lst[i])):
+            task_que.append(task(j + base_x, i + base_y, lst[i][j]))
+    print(Fore.GREEN + "length: {0} height: {1}".format(l, h))
+    print(Fore.GREEN + "{0} tasks added".format(l * h))
+    print_line()
 
-
-with open("ttt.ppm", "r") as pic:
-    with open("test.ppm", "w") as out:
-        pic.readline()
-        pic.readline()
-        s = pic.readline()
-        pic.readline()
-        l = int(str(s).split(' ')[0])
-        h = int(str(s).split(' ')[1])
-        print(l)
-        print(h)
-        out.write("P3\n{0} {1}\n255\n".format(l, h))
-        base_x = 690
-        base_y = 205
-        for i in range(0, h):
-            for j in range(0, l):
-                r = int(pic.readline())
-                g = int(pic.readline())
-                b = int(pic.readline())
-                bestcol = get_nearest((r, g, b))
-                out.write("{0} {1} {2}\n".format(
-                    bestcol[0], bestcol[1], bestcol[2]))
-                bestnum = col_dic[bestcol]
-                data['x'] = base_x + j
-                data['y'] = base_y + i
-                data['color'] = bestnum
-                user = user_lst[0]
-                user_lst.pop(0)
-                if 30 + user.last_time > time.time():
-                    time.sleep(30 + user.last_time - time.time())
-                r = requests.post("https://www.luogu.org/paintBoard/paint",
-                                  data=data, cookies=user.cookie_dict)
-                print("ret_code: {0} text: {1}\n".format(
-                    r.status_code, r.text))
-                print("user: {0}\n".format(user.cookie_dict))
-                print("pos&color: {0}\n".format(data))
-                print("=======================================\n")
-                user.last_time = time.time() + 1
-                user_lst.append(user)
-
-'''
-rgb(0, 0, 0),
-rgb(255, 255, 255),
-rgb(170, 170, 170),
-rgb(85, 85, 85),
-rgb(254, 211, 199),
-rgb(255, 196, 206),
-rgb(250, 172, 142),
-rgb(255, 139, 131),
-rgb(244, 67, 54),
-rgb(233, 30, 99),
-rgb(226, 102, 158):,
-rgb(156, 39, 176):,
-rgb(103, 58, 183):,
-rgb(63, 81, 181):,
-rgb(0, 70, 112):,
-rgb(5, 113, 151):,
-rgb(33, 150, 243):,
-rgb(0, 188, 212):,
-rgb(59, 229, 219):,
-rgb(151, 253, 220):,
-rgb(22, 115, 0):,
-rgb(55, 169, 60):,
-rgb(137, 230, 66):,
-rgb(215, 255, 7):,
-rgb(255, 246, 209):,
-rgb(248, 203, 140):,
-rgb(255, 235, 59):,
-rgb(255, 193, 7):,
-rgb(255, 152, 0):,
-rgb(255, 87, 34):,
-rgb(184, 63, 39):,
-rgb(121, 85, 72):
-'''
+task_success = 0
+task_success_que = []
+log_timer = time.time()
+while len(task_que) > 0:
+    now_task = task_que[0]
+    task_que.pop(0)
+    stat = check_task(now_task)
+    if stat == False:
+        data['x'] = now_task.x
+        data['y'] = now_task.y
+        data['color'] = int(str(now_task.col), base=32)
+        user = user_lst[0]
+        user_lst.pop(0)
+        if 30 + user.last_time > time.time():
+            time.sleep(30 + user.last_time - time.time())
+        try:
+            r = requests.post("https://www.luogu.org/paintBoard/paint",
+                              data=data, cookies=user.cookie_dict)
+        except:
+            time.sleep(0.01)
+            r = requests.post("https://www.luogu.org/paintBoard/paint",
+                              data=data, cookies=user.cookie_dict)
+        if str(r.text).find("500") != -1:
+            out = Fore.RED
+            print(out + "Paint failed")
+        else:
+            out = Fore.GREEN
+            print(out + "Paint succeed")
+            task_success += 1
+            task_success_que.append(time.time())
+            if len(task_success_que) != 0:
+                if time.time() - task_success_que[0] > 30:
+                    task_success_que.pop(0)
+        print(out + "ret_code: {0} text: {1}".format(
+            r.status_code, r.text))
+        print(out + "user: {0}".format(user.cookie_dict))
+        print(Fore.CYAN + "pos&color: {0}".format(data))
+        print_line()
+        user.last_time = time.time() + 1
+        user_lst.append(user)
+    task_que.append(now_task)
+    if time.time() - log_timer > 5:
+        with open("stat.log", "w") as logger:
+            logger.write("30s {0}\n".format(len(task_success_que)))
+            logger.write("all {0}\n".format(task_success))
+            logger.write("{0}\n".format(task_success / task_num))
+        log_timer = time.time()
+print("==============FINISHED=================")
+print_line()
