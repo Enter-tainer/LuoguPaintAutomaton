@@ -1,3 +1,4 @@
+# 不再维护，请使用用 `Typescript` 重写的版本 [luoguPaintAutomatonTS](https://github.com/Enter-tainer/luoguPaintAutomatonTS)
 # 使用
 请在`cookies.txt`中用以下格式存放cookie
 ``` plain
